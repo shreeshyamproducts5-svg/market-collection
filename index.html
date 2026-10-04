@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>अल्टीमेट डेली कलेक्शन ऐप (Name Feature)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+            padding-bottom: 120px;
+        }
+        .header {
+            background-color: #0056b3;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .header h2 { margin: 0; font-size: 20px; }
+        
+        .controls {
+            background: white;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls label {
+            font-size: 14px;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            color: #444;
+        }
+        .upload-row, .date-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .upload-row input[type="file"], .date-row input[type="date"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .btn-green {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-blue {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .container { padding: 0 10px; }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 5px solid #0056b3;
+            position: relative;
+        }
+        .card.saved-state {
+            border-left: 5px solid #28a745;
+            background-color: #f8fff9;
+        }
+        .station-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e9ecef;
+            color: #495057;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .party-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 3px;
+            color: #222;
+            padding-right: 80px;
+        }
+        .ledger-code { font-size: 12px; color: #6c757d; margin-bottom: 8px; }
+        .balance { font-size: 14px; color: #dc3545; margin-bottom: 12px; font-weight: bold; }
+        
+        .input-row { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
+        .input-group { flex: 1; display: flex; flex-direction: column; min-width: 25%; }
+        .input-group label { font-size: 11px; color: #666; margin-bottom: 4px; }
+        .input-group input {
+            padding: 8px 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; width: 100%; box-sizing: border-box;
+        }
+        
+        .saved-display {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #e9ecef; padding: 10px; border-radius: 5px;
+        }
+        .saved-amounts { font-size: 14px; font-weight: bold; color: #28a745; }
+        .edit-btn {
+            background-color: #ffc107; color: #000; border: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px;
+        }
+
+        .footer {
+            position: fixed; bottom: 0; left: 0; width: 100%; background-color: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000;
+        }
+        .footer-totals {
+            display: flex; justify-content: space-between; padding: 8px 15px; background-color: #343a40; color: white; font-size: 14px; font-weight: bold;
+        }
+        .footer-nav {
+            display: flex; justify-content: space-around; padding: 8px 5px; background-color: white;
+        }
+        .nav-btn {
+            background: #f0f2f5; color: #333; border: 1px solid #ddd; padding: 8px 5px; border-radius: 5px; font-weight: bold; font-size: 11px; flex: 1; margin: 0 3px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; position: relative;
+        }
+        .nav-btn.active { background: #e2eef9; color: #0056b3; border-color: #0056b3; }
+        .badge-count {
+            background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; position: absolute; top: -5px; right: -5px;
+        }
+        #loading { display: none; text-align: center; color: #0056b3; font-weight: bold; padding: 10px; }
+        .view-title { padding: 0 10px; font-weight: bold; color: #0056b3; margin-bottom: 10px; }
+
+        /* Report Section Styles */
+        #report-section { display: none; padding: 10px; }
+        .report-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .report-result { margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 14px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #ddd; line-height: 1.5;}
+        .mandatory-label { color: #dc3545; font-size: 13px; font-weight: bold; margin-bottom: 5px; display: block; }
+        .receiver-input { width: 100%; padding: 10px; border: 2px solid #0056b3; border-radius: 5px; font-size: 15px; margin-bottom: 15px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <span class="back-btn" onclick="window.history.back()">&#8592;</span>
+        <h2>डेली कलेक्शन ऐप</h2>
+    </div>
+
+    <!-- MAIN APP SECTION -->
+    <div id="main-section">
+        <div class="controls" id="controls-section">
+            <label>📅 तारीख (डेटा देखने/सेव करने के लिए)</label>
+            <div class="date-row">
+                <input type="date" id="current-date" onchange="changeDate()">
+            </div>
+
+            <label>📁 मास्टर लेजर लिस्ट (Excel / CSV)</label>
+            <div class="upload-row">
+                <input type="file" id="file-upload" accept=".xls, .xlsx, .csv">
+                <button class="btn-green" onclick="handleFileUpload()">अपलोड</button>
+            </div>
+            <div id="loading">डेटा प्रोसेस हो रहा है...</div>
+            
+            <label>📍 स्टेशन (रूट) फिल्टर</label>
+            <select id="station-filter" onchange="renderCurrentView()">
+                <option value="ALL">सभी स्टेशन (All Stations)</option>
+            </select>
+        </div>
+
+        <div class="view-title" id="view-title">पार्टी लिस्ट</div>
+        <div class="container" id="collection-list"></div>
+    </div>
+
+    <!-- REPORT SECTION -->
+    <div id="report-section">
+        <div class="report-card">
+            <h3 style="margin-top:0; color:#0056b3;">📊 कलेक्शन रिपोर्ट निकालें</h3>
+            
+            <label style="font-size:12px; color:#666;">शुरुआती तारीख (From Date):</label>
+            <input type="date" id="report-from" style="width:100%; padding:8px; margin-bottom:10px; box-sizing:border-box;">
+            
+            <label style="font-size:12px; color:#666;">अंतिम तारीख (To Date):</label>
+            <input type="date" id="report-to" style="width:100%; padding:8px; margin-bottom:15px; box-sizing:border-box;">
+            
+            <label class="mandatory-label">👤 पैसे लाने वाले का नाम (Mandatory) *</label>
+            <input type="text" id="receiver-name" class="receiver-input" placeholder="अपना नाम यहाँ लिखें...">
+            
+            <button class="btn-blue" style="width:100%; margin-bottom:10px;" onclick="generateReport()">रिपोर्ट निकालें</button>
+            <button class="btn-green" style="width:100%;" onclick="sendWhatsAppReport()">WhatsApp पर शेयर करें</button>
+            
+            <div id="report-output" class="report-result">रिपोर्ट यहाँ दिखाई देगी...</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-totals" id="footer-totals">
+            <div>प्राप्त: ₹<span id="total-received">0</span></div>
+            <div>अतिरिक्त/एडवांस: ₹<span id="total-extra">0</span></div>
+        </div>
+        <div class="footer-nav">
+            <div class="nav-btn active" id="tab-home" onclick="switchTab('HOME')">🏠 होम</div>
+            <div class="nav-btn" id="tab-draft" onclick="switchTab('DRAFT')">📝 ड्राफ्ट <span class="badge-count" id="draft-count" style="display:none;">0</span></div>
+            <div class="nav-btn" id="tab-saved" onclick="switchTab('SAVED')">✅ सेव <span class="badge-count" id="saved-count" style="display:none;">0</span></div>
+            <div class="nav-btn" id="tab-report" onclick="switchTab('REPORT')">📊 रिपोर्ट</div>
+        </div>
+    </div>
+
+    <script>
+        let appData = { parties: [], records: {} };
+        let currentDate = "";
+        let currentTab = 'HOME';
+
+        window.onload = function() {
+            history.replaceState({ tab: 'HOME' }, "", "");
+            window.addEventListener('popstate', function(event) {
+                if (event.state && event.state.tab) {
+                    switchTab(event.state.tab, true);
+                } else {
+                    switchTab('HOME', true);
+                }
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('current-date').value = today;
+            currentDate = today;
+
+            loadData();
+            
+            let lastWeek = new Date();
+            lastWeek.setDate(lastWeek.getDate() - 7);
+            document.getElementById('report-from').value = lastWeek.toISOString().split('T')[0];
+            document.getElementById('report-to').value = today;
+
+            // Load saved receiver name if exists
+            let savedName = localStorage.getItem('collection_receiverName');
+            if (savedName) document.getElementById('receiver-name').value = savedName;
+
+            if(appData.parties.length > 0) {
+                populateStations();
+                renderCurrentView();
+            }
+        };
+
+        function changeDate() {
+            currentDate = document.getElementById('current-date').value;
+            if(!appData.records[currentDate]) appData.records[currentDate] = {};
+            renderCurrentView();
+        }
+
+        function loadData() {
+            let saved = localStorage.getItem('ultimateCollectionApp_Data');
+            if (saved) appData = JSON.parse(saved);
+            if (!appData.records) appData.records = {};
+            
+            const todayDate = new Date();
+            for (let dateKey in appData.records) {
+                let entryDate = new Date(dateKey);
+                let diffTime = Math.abs(todayDate - entryDate);
+                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                if (diffDays > 365) delete appData.records[dateKey];
+            }
+            saveData(); 
+        }
+
+        function saveData() {
+            localStorage.setItem('ultimateCollectionApp_Data', JSON.stringify(appData));
+        }
+
+        function handleFileUpload() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            if (!file) { alert("कृपया पहले फाइल (Excel/CSV) चुनें!"); return; }
+
+            document.getElementById('loading').style.display = 'block';
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    extractParties(jsonData);
+                } catch (error) {
+                    console.error(error);
+                    alert("फ़ाइल को पढ़ने में तकनीकी खराबी आई।");
+                    document.getElementById('loading').style.display = 'none';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function extractParties(dataArray) {
+            let newData = [];
+            let codeIdx = 0, nameIdx = 1, balIdx = 2, stationIdx = 3; 
+            for(let r = 0; r < Math.min(10, dataArray.length); r++) {
+                let row = dataArray[r];
+                if(!row || row.length < 2) continue;
+                let tempCode=-1, tempName=-1, tempBal=-1, tempSt=-1;
+                for(let c = 0; c < row.length; c++) {
+                    let cellVal = String(row[c]).toLowerCase().trim();
+                    if(cellVal.includes("code")) tempCode = c;
+                    if(cellVal.includes("name") || cellVal.includes("party") || cellVal.includes("ledger")) tempName = c;
+                    if(cellVal.includes("balance") || cellVal.includes("₹")) tempBal = c;
+                    if(cellVal.includes("station") || cellVal.includes("route")) tempSt = c;
+                }
+                if (tempName !== -1 && tempBal !== -1) {
+                    codeIdx = tempCode !== -1 ? tempCode : 0;
+                    nameIdx = tempName; balIdx = tempBal;
+                    stationIdx = tempSt !== -1 ? tempSt : 3;
+                    dataArray = dataArray.slice(r + 1); 
+                    break;
+                }
+            }
+
+            dataArray.forEach(row => {
+                if (row && row.length > nameIdx && row[nameIdx]) {
+                    let name = String(row[nameIdx]).trim();
+                    if(name.length > 0) {
+                        let balText = String(row[balIdx] || "0").replace(/[^0-9.-]+/g,"");
+                        let balance = parseFloat(balText) || 0;
+                        let code = row[codeIdx] ? String(row[codeIdx]).trim() : "N/A";
+                        let station = row[stationIdx] ? String(row[stationIdx]).trim() : "Unknown";
+                        newData.push({ code, name, balance, station });
+                    }
+                }
+            });
+
+            document.getElementById('loading').style.display = 'none';
+            if (newData.length > 0) {
+                appData.parties = newData;
+                saveData(); populateStations(); switchTab('HOME');
+                alert(`✅ डेटा अपलोड सफल! (${newData.length} पार्टियां)`);
+            } else {
+                alert("❌ फ़ाइल से डेटा नहीं मिला।");
+            }
+        }
+
+        function populateStations() {
+            const filter = document.getElementById('station-filter');
+            const stations = [...new Set(appData.parties.map(item => item.station))].filter(s => s).sort();
+            filter.innerHTML = '<option value="ALL">सभी स्टेशन (All Stations)</option>';
+            stations.forEach(st => {
+                let opt = document.createElement('option');
+                opt.value = st; opt.innerText = st; filter.appendChild(opt);
+            });
+        }
+
+        function switchTab(tabName, isPopState = false) {
+            currentTab = tabName;
+            if (!isPopState) history.pushState({ tab: tabName }, "", "");
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if(tabName === 'REPORT') {
+                document.getElementById('tab-report').classList.add('active');
+                document.getElementById('main-section').style.display = 'none';
+                document.getElementById('report-section').style.display = 'block';
+                document.getElementById('footer-totals').style.display = 'none';
+            } else {
+                document.getElementById('main-section').style.display = 'block';
+                document.getElementById('report-section').style.display = 'none';
+                document.getElementById('footer-totals').style.display = 'flex';
+                
+                if(tabName === 'HOME') {
+                    document.getElementById('tab-home').classList.add('active');
+                    document.getElementById('controls-section').style.display = 'block';
+                    document.getElementById('view-title').innerText = "पार्टी लिस्ट (होम)";
+                } else if (tabName === 'DRAFT') {
+                    document.getElementById('tab-draft').classList.add('active');
+                    document.getElementById('controls-section').style.display = 'none';
+                    document.getElementById('view-title').innerText = "📝 ड्राफ्ट लिस्ट (अनसेव्ड)";
+                } else if (tabName === 'SAVED') {
+                    document.getElementById('tab-saved').classList.add('active');
+                    document.getElementById('controls-section').style.display = 'none';
+                    document.getElementById('view-title').innerText = "✅ सेव डिटेल्स";
+                }
+                renderCurrentView();
+            }
+        }
+
+        function renderCurrentView() {
+            const container = document.getElementById('collection-list');
+            container.innerHTML = '';
+            
+            if(appData.parties.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:20px;">कोई लिस्ट अपलोड नहीं है।</div>';
+                updateBadges(); return;
+            }
+
+            if (!appData.records[currentDate]) appData.records[currentDate] = {};
+            const todayRecords = appData.records[currentDate];
+            const fragment = document.createDocumentFragment();
+            let displayCount = 0;
+            const selectedStation = document.getElementById('station-filter').value;
+
+            appData.parties.forEach((item, index) => {
+                let uniqueKey = item.code !== "N/A" ? item.code : String(index) + item.name;
+                let inputData = todayRecords[uniqueKey] || { received: '', discount: '', extra: '', status: 'none' };
+                let isDraft = (inputData.status === 'draft');
+                let isSaved = (inputData.status === 'saved');
+
+                let shouldDisplay = false;
+                if (currentTab === 'HOME') {
+                    if (selectedStation === "ALL" || item.station === selectedStation) shouldDisplay = true;
+                } else if (currentTab === 'DRAFT' && isDraft) shouldDisplay = true;
+                else if (currentTab === 'SAVED' && isSaved) shouldDisplay = true;
+
+                if(shouldDisplay) {
+                    displayCount++;
+                    const card = document.createElement('div');
+                    card.className = isSaved ? 'card saved-state' : 'card';
+                    
+                    let htmlContent = `
+                        <div class="station-badge">${item.station}</div>
+                        <div class="party-name">${item.name}</div>
+                        <div class="ledger-code">कोड: ${item.code}</div>
+                        <div class="balance">बकाया: ₹${item.balance.toFixed(2)}</div>
+                    `;
+
+                    if (isSaved) {
+                        htmlContent += `
+                            <div class="saved-display">
+                                <div class="saved-amounts">
+                                    प्राप्त: ₹${inputData.received || 0} 
+                                    <span style="font-size:12px; color:#666; font-weight:normal;">| छूट: ₹${inputData.discount || 0}</span><br>
+                                    <span style="font-size:13px; color:#0056b3;">अतिरिक्त: ₹${inputData.extra || 0}</span>
+                                </div>
+                                <button class="edit-btn" onclick="editEntry('${uniqueKey}')">✏️ एडिट</button>
+                            </div>
+                        `;
+                    } else {
+                        htmlContent += `
+                            <div class="input-row">
+                                <div class="input-group"><label>प्राप्त (₹)</label><input type="number" id="rec-${uniqueKey}" value="${inputData.received}" placeholder="0" oninput="autoDraft('${uniqueKey}')"></div>
+                                <div class="input-group"><label>छूट (₹)</label><input type="number" id="disc-${uniqueKey}" value="${inputData.discount}" placeholder="0" oninput="autoDraft('${uniqueKey}')"></div>
+                                <div class="input-group"><label>अतिरिक्त (₹)</label><input type="number" id="ext-${uniqueKey}" value="${inputData.extra || ''}" placeholder="0" oninput="autoDraft('${uniqueKey}')"></div>
+                                <button class="btn-blue" style="margin-bottom:2px;" onclick="saveEntry('${uniqueKey}')">सेव</button>
+                            </div>
+                        `;
+                    }
+                    card.innerHTML = htmlContent;
+                    fragment.appendChild(card);
+                }
+            });
+
+            if (displayCount === 0) container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">कोई डेटा नहीं है।</div>`;
+            else container.appendChild(fragment);
+            updateBadges();
+        }
+
+        function autoDraft(uniqueKey) {
+            let rec = document.getElementById(`rec-${uniqueKey}`).value;
+            let disc = document.getElementById(`disc-${uniqueKey}`).value;
+            let ext = document.getElementById(`ext-${uniqueKey}`).value;
+            if(!appData.records[currentDate][uniqueKey]) appData.records[currentDate][uniqueKey] = {};
+            appData.records[currentDate][uniqueKey].received = rec;
+            appData.records[currentDate][uniqueKey].discount = disc;
+            appData.records[currentDate][uniqueKey].extra = ext;
+            appData.records[currentDate][uniqueKey].status = 'draft';
+            saveData(); updateBadges();
+        }
+
+        function saveEntry(uniqueKey) {
+            let rec = document.getElementById(`rec-${uniqueKey}`).value;
+            let disc = document.getElementById(`disc-${uniqueKey}`).value;
+            let ext = document.getElementById(`ext-${uniqueKey}`).value;
+            if(!rec && !disc && !ext) { alert("कृपया राशि दर्ज करें!"); return; }
+            if(!appData.records[currentDate][uniqueKey]) appData.records[currentDate][uniqueKey] = {};
+            appData.records[currentDate][uniqueKey].received = rec;
+            appData.records[currentDate][uniqueKey].discount = disc;
+            appData.records[currentDate][uniqueKey].extra = ext;
+            appData.records[currentDate][uniqueKey].status = 'saved';
+            saveData(); renderCurrentView(); 
+        }
+
+        function editEntry(uniqueKey) {
+            appData.records[currentDate][uniqueKey].status = 'draft';
+            saveData(); renderCurrentView();
+        }
+
+        function updateBadges() {
+            let totalRec = 0, totalExt = 0, draftCount = 0, savedCount = 0;
+            const todayRecords = appData.records[currentDate] || {};
+            for (let key in todayRecords) {
+                let item = todayRecords[key];
+                if (item.received || item.discount || item.extra) {
+                    if (item.status === 'saved') {
+                        savedCount++;
+                        totalRec += parseFloat(item.received || 0);
+                        totalExt += parseFloat(item.extra || 0);
+                    } else if (item.status === 'draft') {
+                        draftCount++;
+                    }
+                }
+            }
+            document.getElementById('total-received').innerText = totalRec;
+            document.getElementById('total-extra').innerText = totalExt;
+            document.getElementById('draft-count').style.display = draftCount > 0 ? 'block' : 'none';
+            document.getElementById('draft-count').innerText = draftCount;
+            document.getElementById('saved-count').style.display = savedCount > 0 ? 'block' : 'none';
+            document.getElementById('saved-count').innerText = savedCount;
+        }
+
+        let currentReportText = "";
+
+        function generateReport() {
+            const fromDateStr = document.getElementById('report-from').value;
+            const toDateStr = document.getElementById('report-to').value;
+            const receiverName = document.getElementById('receiver-name').value.trim();
+
+            if(!receiverName) { 
+                alert("⚠️ कृपया रिपोर्ट निकालने से पहले 'पैसे लाने वाले का नाम' (Receiver Name) दर्ज करें!"); 
+                document.getElementById('receiver-name').focus();
+                return; 
+            }
+            if(!fromDateStr || !toDateStr) { alert("कृपया From और To Date चुनें।"); return; }
+
+            // Save the name for next time
+            localStorage.setItem('collection_receiverName', receiverName);
+
+            const fromDate = new Date(fromDateStr);
+            const toDate = new Date(toDateStr);
+            
+            let partyMap = {};
+            appData.parties.forEach((p, idx) => {
+                let key = p.code !== "N/A" ? p.code : String(idx) + p.name;
+                partyMap[key] = p;
+            });
+
+            // Clean, simplified report format with Receiver Name
+            let finalReport = `📊 *कलेक्शन रिपोर्ट*\n👤 *कलेक्शन बॉय:* ${receiverName}\n📅 ${fromDateStr} से ${toDateStr}\n`;
+            let totalRec = 0, totalDisc = 0, totalExt = 0, count = 0;
+            
+            // Sort dates logically
+            let dateKeys = Object.keys(appData.records).sort();
+            
+            for(let dateKey of dateKeys) {
+                let d = new Date(dateKey);
+                if (d >= fromDate && d <= toDate) {
+                    let dayRecords = appData.records[dateKey];
+                    let hasDataForDay = false;
+                    
+                    // Format Date nicely to DD-MM-YYYY
+                    let [yy, mm, dd] = dateKey.split('-');
+                    let dayText = `\n🗓️ *${dd}-${mm}-${yy}*\n`;
+                    
+                    for(let pKey in dayRecords) {
+                        let entry = dayRecords[pKey];
+                        if(entry.status === 'saved' && (entry.received || entry.discount || entry.extra)) {
+                            hasDataForDay = true;
+                            let pInfo = partyMap[pKey] || { name: "अज्ञात पार्टी", station: "-" };
+                            
+                            // Constructing a CLEAN Single Line
+                            let parts = [];
+                            parts.push(`₹${entry.received || 0}`);
+                            if (entry.discount && parseFloat(entry.discount) > 0) parts.push(`छूट: ₹${entry.discount}`);
+                            if (entry.extra && parseFloat(entry.extra) > 0) parts.push(`एक्स्ट्रा: ₹${entry.extra}`);
+                            
+                            dayText += `🔹 ${pInfo.name} -> ${parts.join(' | ')}\n`;
+                            
+                            totalRec += parseFloat(entry.received || 0);
+                            totalDisc += parseFloat(entry.discount || 0);
+                            totalExt += parseFloat(entry.extra || 0);
+                            count++;
+                        }
+                    }
+                    if (hasDataForDay) finalReport += dayText;
+                }
+            }
+
+            if(count === 0) {
+                document.getElementById('report-output').innerText = "इस तारीख के बीच कोई सेव किया हुआ डेटा नहीं मिला।";
+                currentReportText = "";
+                return;
+            }
+
+            finalReport += `\n------------------\n💰 *कुल प्राप्त:* ₹${totalRec}\n📉 *कुल छूट:* ₹${totalDisc}\n📈 *कुल एक्स्ट्रा:* ₹${totalExt}`;
+            document.getElementById('report-output').innerText = finalReport;
+            currentReportText = finalReport;
+        }
+
+        function sendWhatsAppReport() {
+            // Re-validate just in case they clicked Share directly without generating
+            const receiverName = document.getElementById('receiver-name').value.trim();
+            if(!receiverName) { 
+                alert("⚠️ कृपया रिपोर्ट शेयर करने से पहले 'पैसे लाने वाले का नाम' (Receiver Name) दर्ज करें!"); 
+                document.getElementById('receiver-name').focus();
+                return; 
+            }
+
+            if(!currentReportText) { 
+                // Auto generate if they haven't clicked generate yet
+                generateReport();
+                if(!currentReportText) return; 
+            }
+            
+            let whatsappUrl = "https://wa.me/?text=" + encodeURIComponent(currentReportText);
+            window.open(whatsappUrl, '_blank');
+        }
+    </script>
+</body>
+</html>
