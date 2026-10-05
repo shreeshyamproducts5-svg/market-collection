@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>अल्टीमेट कलेक्शन ऐप (UI Update)</title>
+    <title>अल्टीमेट कलेक्शन ऐप (Auto-Sync)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; color: #333; padding-bottom: 60px; }
@@ -30,7 +30,6 @@
         
         .btn-green { background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; }
         .btn-blue { background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;}
-        .btn-sync { background-color: #ff9800; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; width: 100%; margin-bottom: 15px; }
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
         .container { padding: 0 10px; }
         .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid #0056b3; position: relative; }
@@ -128,8 +127,6 @@
             <label style="font-size:12px; color:#666;">अंतिम तारीख (To Date):</label>
             <input type="date" id="report-to" style="width:100%; padding:8px; margin-bottom:15px; box-sizing:border-box;">
             
-            <button class="btn-sync" id="sync-btn" onclick="syncToGoogleSheet()">☁️ Google Sheet पर सेव करें</button>
-            
             <!-- Shorter side-by-side buttons -->
             <div class="flex-buttons">
                 <button class="btn-blue" style="flex: 1;" onclick="generateReport()">
@@ -184,8 +181,7 @@
 
             if(appData.parties.length > 0) { populateStations(); renderCurrentView(); }
             
-            if(navigator.geolocation) { navigator.geolocation.getCurrentPosition(()=>{}, ()=>{}); }
-            
+            // Auto sync check on load
             setTimeout(autoSyncToGoogleSheet, 3000);
         };
 
@@ -342,7 +338,7 @@
 
             appData.parties.forEach((item, index) => {
                 let uniqueKey = item.code !== "N/A" ? item.code : String(index) + item.name;
-                let inputData = todayRecords[uniqueKey] || { received: '', discount: '', extra: '', mode: 'Cash', remark: '', status: 'none', time: '', lat: '', lng: '', synced: false };
+                let inputData = todayRecords[uniqueKey] || { received: '', discount: '', extra: '', mode: 'Cash', remark: '', status: 'none', time: '', synced: false };
                 let isDraft = (inputData.status === 'draft');
                 let isSaved = (inputData.status === 'saved');
 
@@ -449,28 +445,9 @@
             entry.status = 'saved'; entry.synced = false;
             entry.time = new Date().toLocaleTimeString('hi-IN'); 
 
-            if(navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => { 
-                        entry.lat = pos.coords.latitude; 
-                        entry.lng = pos.coords.longitude; 
-                        saveData(); 
-                        autoSyncToGoogleSheet(); 
-                    },
-                    (err) => { 
-                        entry.lat = ""; 
-                        entry.lng = ""; 
-                        saveData(); 
-                        autoSyncToGoogleSheet(); 
-                    },
-                    { timeout: 5000 }
-                );
-            } else {
-                saveData();
-                autoSyncToGoogleSheet(); 
-            }
-            
+            saveData(); 
             renderCurrentView(); 
+            autoSyncToGoogleSheet(); // Auto Sync trigger directly
         }
 
         function editEntry(uniqueKey) { appData.records[currentDate][uniqueKey].status = 'draft'; appData.records[currentDate][uniqueKey].synced = false; saveData(); renderCurrentView(); }
@@ -531,9 +508,7 @@
                             discount: entry.discount || 0,
                             extra: entry.extra || 0,
                             mode: entry.mode || 'Cash',
-                            remark: entry.remark || '',
-                            lat: entry.lat || '',
-                            lng: entry.lng || ''
+                            remark: entry.remark || ''
                         });
                     }
                 }
@@ -557,12 +532,6 @@
                 }
             })
             .catch(error => { console.error("Auto Sync Failed (Offline or Error):", error); });
-        }
-        
-        // Manual Sync (if needed from report tab)
-        function syncToGoogleSheet() {
-            autoSyncToGoogleSheet();
-            alert("डेटा सिंक किया जा रहा है... अगर इंटरनेट चालू है तो यह अपने आप हो जाएगा।");
         }
 
         let currentReportText = "";
