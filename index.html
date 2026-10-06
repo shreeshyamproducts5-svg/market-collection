@@ -95,11 +95,11 @@
     <!-- MAIN SECTION -->
     <div id="main-section" style="display:none;">
         <div class="controls" id="controls-section">
-            <label>📅 तारीख चुनें</label>
+            <label>📅 तारीख चुनें (डेटा देखने/अपलोड करने के लिए)</label>
             <div class="date-row">
                 <input type="date" id="current-date" onchange="changeDate()">
             </div>
-            <label>📁 मास्टर लेजर लिस्ट (Excel / CSV)</label>
+            <label>📁 इस तारीख की लेजर लिस्ट (Excel/CSV)</label>
             <p style="font-size:11px; color:green; margin-top:-5px;">(एक फोन से अपलोड करने पर दूसरे में खुद आ जाएगी)</p>
             <div class="upload-row">
                 <input type="file" id="file-upload" accept=".xls, .xlsx, .csv">
@@ -145,11 +145,12 @@
 
     <script>
         // ==========================================
-        // GOOGLE APP SCRIPT URL (100% FIXED)
+        // AUTO-SYNC GOOGLE APP SCRIPT URL
         // ==========================================
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxInpLa6e9L7ZIhzJsRKGW9lqi2E7I7JJykZEpQGG_fin7A1idGD0XlvmvBwgU5AUeJww/exec";
         
-        let appData = { parties: [], records: {} };
+        // Data Structure now stores parties per Date
+        let appData = { parties: {}, records: {} };
         let currentDate = "";
         let currentTab = 'HOME';
 
@@ -183,8 +184,8 @@
                 document.getElementById('main-section').style.display = 'block';
                 document.getElementById('app-footer').style.display = 'block';
                 document.getElementById('user-greeting').innerText = `👤 ${name || mobile}`;
-                loadDataLocally(); // Fallback load
-                syncCloudState(mobile, pin); // Fetch fresh from cloud automatically!
+                loadDataLocally(); 
+                syncCloudState(mobile, pin); 
             }
         }
 
@@ -199,14 +200,13 @@
             btn.innerText = "लॉग इन हो रहा है... ⏳";
             btn.disabled = true;
 
-            // Fetch from Cloud
             fetch(`${GOOGLE_SHEET_URL}?mobile=${mobile}&password=${pin}`)
             .then(res => res.json())
             .then(data => {
                 if(data.error === "User Not Found") {
                     if(!name) { alert("पहली बार अकाउंट बनाने के लिए 'आपका नाम' डालना जरूरी है!"); btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false; return; }
                     if(confirm("यह नया अकाउंट है। क्या आप रजिस्टर करना चाहते हैं?")) {
-                        appData = { parties: [], records: {} };
+                        appData = { parties: {}, records: {} };
                         saveStateToCloud(mobile, name, pin, true); 
                     } else {
                         btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
@@ -215,8 +215,8 @@
                     alert("❌ गलत पासवर्ड! कृपया सही पासवर्ड डालें।");
                     btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
                 } else {
-                    // Success Login (Cloud Sync)
                     appData = data;
+                    normalizeAppData();
                     localStorage.setItem('cloud_mobile', mobile);
                     localStorage.setItem('cloud_pin', pin);
                     localStorage.setItem('cloud_name', name || mobile);
@@ -227,14 +227,12 @@
             })
             .catch(err => {
                 alert("इंटरनेट कनेक्शन चेक करें! (ऑफ़लाइन लॉगिन किया जा रहा है)");
-                // Offline fallback logic could go here if needed
                 btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
             });
         }
 
         function saveStateToCloud(mobile, name, pin, isNew = false) {
             let payload = { action: "SAVE_STATE", mobile: mobile, name: name, password: pin, appData: appData };
-            
             fetch(GOOGLE_SHEET_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -254,8 +252,9 @@
             .then(data => {
                 if(!data.error) {
                     appData = data;
+                    normalizeAppData();
                     saveData();
-                    if(appData.parties.length > 0) populateStations();
+                    populateStations();
                     renderCurrentView();
                 }
             }).catch(e => console.log("Offline - using local cache"));
@@ -272,18 +271,32 @@
         function changeDate() {
             currentDate = document.getElementById('current-date').value;
             if(!appData.records[currentDate]) appData.records[currentDate] = {};
+            populateStations();
             renderCurrentView();
+        }
+
+        function normalizeAppData() {
+            if (!appData.records) appData.records = {};
+            if (!appData.parties) appData.parties = {};
+            // Backward compatibility: If parties was an array, move it to today's date
+            if (Array.isArray(appData.parties)) {
+                let temp = appData.parties;
+                appData.parties = {};
+                appData.parties[currentDate] = temp;
+            }
         }
 
         function loadDataLocally() {
             let saved = localStorage.getItem('ultimateCollectionApp_Data');
             if (saved) appData = JSON.parse(saved);
-            if (!appData.records) appData.records = {};
-            if(appData.parties && appData.parties.length > 0) populateStations();
+            normalizeAppData();
+            populateStations();
             renderCurrentView();
         }
 
-        function saveData() { localStorage.setItem('ultimateCollectionApp_Data', JSON.stringify(appData)); }
+        function saveData() { 
+            localStorage.setItem('ultimateCollectionApp_Data', JSON.stringify(appData)); 
+        }
 
         function handleFileUpload() {
             const fileInput = document.getElementById('file-upload');
@@ -330,15 +343,19 @@
                 }
             });
             if (newData.length > 0) { 
-                appData.parties = newData; saveData(); populateStations(); switchTab('HOME'); 
-                triggerAutoSync(null); // Sync Excel list to cloud
-                alert("पार्टी लिस्ट क्लाउड में सेव हो गई!"); 
+                appData.parties[currentDate] = newData; // Saving parties specific to the current Date!
+                saveData(); 
+                populateStations(); 
+                switchTab('HOME'); 
+                triggerAutoSync(null); 
+                alert(currentDate + " की पार्टी लिस्ट सेव हो गई!"); 
             } else { alert("डेटा नहीं मिला!"); }
         }
 
         function populateStations() {
             const filter = document.getElementById('station-filter');
-            const stations = [...new Set(appData.parties.map(i => i.station))].filter(s => s).sort();
+            let currentParties = appData.parties[currentDate] || [];
+            const stations = [...new Set(currentParties.map(i => i.station))].filter(s => s).sort();
             filter.innerHTML = '<option value="ALL">सभी स्टेशन (All Stations)</option>';
             stations.forEach(st => { filter.innerHTML += `<option value="${st}">${st}</option>`; });
         }
@@ -369,14 +386,21 @@
         function renderCurrentView() {
             const container = document.getElementById('collection-list');
             container.innerHTML = '';
-            if(!appData.parties || appData.parties.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">कोई लिस्ट नहीं है। कृपया अपलोड करें।</div>'; updateBadges(); return; }
+            
+            let currentParties = appData.parties[currentDate] || [];
+            
+            if(!currentParties || currentParties.length === 0) { 
+                container.innerHTML = '<div style="text-align:center; padding:20px;">इस तारीख के लिए कोई लिस्ट अपलोड नहीं है।</div>'; 
+                updateBadges(); return; 
+            }
+            
             if (!appData.records[currentDate]) appData.records[currentDate] = {};
             const todayRecords = appData.records[currentDate];
             const fragment = document.createDocumentFragment();
             let displayCount = 0;
             const selectedStation = document.getElementById('station-filter').value;
 
-            appData.parties.forEach((item, index) => {
+            currentParties.forEach((item, index) => {
                 let uniqueKey = item.code !== "N/A" ? item.code : String(index) + item.name;
                 let inputData = todayRecords[uniqueKey] || { received: '', discount: '', extra: '', mode: 'Cash', remark: '', status: 'none', time: '', synced: false };
                 let isDraft = (inputData.status === 'draft');
@@ -479,9 +503,9 @@
             saveData(); 
             renderCurrentView(); 
             
-            // BACKGROUND AUTO-SYNC (Sends to cloud without button click)
-            let partyName = appData.parties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.name || "Unknown";
-            let station = appData.parties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.station || "-";
+            let currentParties = appData.parties[currentDate] || [];
+            let partyName = currentParties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.name || "Unknown";
+            let station = currentParties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.station || "-";
             
             let singleRecord = {
                 date: currentDate, time: entry.time, receiverName: localStorage.getItem('cloud_name'),
@@ -515,9 +539,6 @@
             document.getElementById('saved-count').innerText = savedCount;
         }
 
-        // ==========================================
-        // 100% BACKGROUND AUTO SYNC FUNCTION
-        // ==========================================
         function triggerAutoSync(newRecordObject) {
             const mobile = localStorage.getItem('cloud_mobile');
             const pin = localStorage.getItem('cloud_pin');
@@ -533,7 +554,6 @@
                 newRecords: newRecordObject ? [newRecordObject] : []
             };
 
-            // fetch header MUST be text/plain to avoid CORS preflight block
             fetch(GOOGLE_SHEET_URL, { 
                 method: "POST", 
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -545,7 +565,6 @@
                     if(newRecordObject) {
                         appData.records[currentDate][newRecordObject.uniqueKey].synced = true;
                     } else {
-                        // Mark all as synced
                         for(let d in appData.records) {
                             for(let k in appData.records[d]) {
                                 if(appData.records[d][k].status === 'saved') appData.records[d][k].synced = true;
@@ -556,7 +575,7 @@
                     if(currentTab === 'SAVED') renderCurrentView(); 
                 }
             })
-            .catch(error => { console.log("Offline - Sync will happen later"); });
+            .catch(error => { console.log("Offline - Sync later"); });
         }
 
         let currentReportText = "";
@@ -568,8 +587,7 @@
             if(!fromDateStr || !toDateStr) { alert("कृपया From और To Date चुनें।"); return; }
 
             const fromDate = new Date(fromDateStr); const toDate = new Date(toDateStr);
-            let partyMap = {}; appData.parties.forEach((p, idx) => { partyMap[p.code !== "N/A" ? p.code : String(idx) + p.name] = p; });
-
+            
             let finalReport = `📊 *कलेक्शन रिपोर्ट*\n👤 *कलेक्शन बॉय:* ${receiverName}\n📅 ${fromDateStr} से ${toDateStr}\n`;
             let totalCash = 0, totalOnline = 0, totalDisc = 0, totalExtCash = 0, count = 0;
             let dateKeys = Object.keys(appData.records).sort();
@@ -581,6 +599,10 @@
                     let hasDataForDay = false;
                     let [yy, mm, dd] = dateKey.split('-');
                     let dayText = `\n🗓️ *${dd}-${mm}-${yy}*\n`;
+                    
+                    let dayParties = appData.parties[dateKey] || [];
+                    let partyMap = {};
+                    dayParties.forEach((p, idx) => { partyMap[p.code !== "N/A" ? p.code : String(idx) + p.name] = p; });
                     
                     for(let pKey in dayRecords) {
                         let entry = dayRecords[pKey];
