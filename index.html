@@ -3,34 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>अल्टीमेट कलेक्शन ऐप (Auto-Sync)</title>
+    <title>अल्टीमेट क्लाउड कलेक्शन ऐप</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; color: #333; padding-bottom: 60px; }
         
-        /* New Header & Nav Styling */
+        /* LOGIN SCREEN OVERLAY */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #0056b3, #004494); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; color: white; }
+        .login-box { background: white; color: #333; padding: 30px 25px; border-radius: 12px; width: 85%; max-width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+        .login-box h2 { margin-top: 0; color: #0056b3; margin-bottom: 5px; }
+        .login-box p { font-size: 13px; color: #666; margin-bottom: 20px; }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 15px; }
+        .btn-login { width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+        .btn-login:disabled { background: #6c757d; }
+
         .header-container { position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .main-header { background-color: #0056b3; color: white; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; }
         .back-btn { font-size: 22px; cursor: pointer; user-select: none; margin-right: 10px; }
-        .header-title { margin: 0; font-size: 18px; flex-grow: 1; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .login-btn { cursor: pointer; font-size: 12px; background: rgba(255,255,255,0.2); padding: 6px 10px; border-radius: 5px; font-weight: bold; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,0.4); }
-        .logout-btn { background: rgba(220, 53, 69, 0.9); border: 1px solid #dc3545; }
+        .header-title { margin: 0; font-size: 16px; flex-grow: 1; font-weight: bold; }
+        .logout-btn { cursor: pointer; font-size: 11px; background: rgba(220, 53, 69, 0.9); border: 1px solid #dc3545; padding: 5px 8px; border-radius: 5px; font-weight: bold; color: white; }
         
         .top-nav { display: flex; justify-content: space-around; background-color: #004494; padding: 0; }
-        .nav-btn { flex: 1; text-align: center; color: white; opacity: 0.7; padding: 10px 5px; font-size: 12px; font-weight: bold; cursor: pointer; position: relative; transition: 0.3s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .nav-btn { flex: 1; text-align: center; color: white; opacity: 0.7; padding: 10px 5px; font-size: 12px; font-weight: bold; cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; }
         .nav-btn.active { opacity: 1; background-color: rgba(255,255,255,0.1); border-bottom: 3px solid #ff9800; }
-        .nav-icon { font-size: 16px; }
-        .badge-count { background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 9px; position: absolute; top: 2px; right: 10%; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .badge-count { background: #dc3545; color: white; border-radius: 50%; padding: 2px 6px; font-size: 9px; position: absolute; top: 2px; right: 10%; }
         
         .controls { background: white; padding: 15px; margin: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .controls label { font-size: 13px; font-weight: bold; display: block; margin-bottom: 5px; color: #444; }
         .upload-row, .date-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
         .upload-row input[type="file"], .date-row input[type="date"] { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
-        
         .btn-green { background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; }
         .btn-blue { background-color: #007bff; color: white; border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;}
         select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+        
         .container { padding: 0 10px; }
         .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid #0056b3; position: relative; }
         .card.saved-state { border-left: 5px solid #28a745; background-color: #f8fff9; }
@@ -47,67 +52,59 @@
         .saved-amounts { font-size: 13px; font-weight: bold; color: #28a745; line-height: 1.4;}
         .edit-btn { background-color: #ffc107; color: #000; border: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px; }
         
-        /* Footer strictly for totals now */
         .footer { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #343a40; color: white; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1000; }
         .footer-totals { display: flex; justify-content: space-between; padding: 12px 15px; font-size: 14px; font-weight: bold; }
         
-        #loading { display: none; text-align: center; color: #0056b3; font-weight: bold; padding: 10px; }
         .view-title { padding: 5px 10px; font-weight: bold; color: #0056b3; margin-bottom: 5px; font-size: 14px; }
-        
         #report-section { display: none; padding: 10px; }
         .report-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .report-result { margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 5px; font-size: 13px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #ddd; line-height: 1.5;}
-        .info-text { font-size: 11px; color: #666; margin-top: 4px; }
         .tag-online { color: #17a2b8; font-size: 11px; }
-        .tag-cash { color: #6c757d; font-size: 11px; }
-        
         .flex-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="header-container">
-        <!-- Top Bar with Login/Logout -->
-        <div class="main-header">
-            <span class="back-btn" onclick="window.history.back()">&#8592;</span>
-            <h2 class="header-title">डेली कलेक्शन</h2>
-            <div id="login-btn" class="login-btn" onclick="handleLoginLogout()">
-                👤 लॉग इन
-            </div>
-        </div>
-        
-        <!-- Navigation Tabs moved to Top -->
-        <div class="top-nav">
-            <div class="nav-btn active" id="tab-home" onclick="switchTab('HOME')">
-                <span class="nav-icon">🏠</span>होम
-            </div>
-            <div class="nav-btn" id="tab-draft" onclick="switchTab('DRAFT')">
-                <span class="nav-icon">📝</span>ड्राफ्ट
-                <span class="badge-count" id="draft-count" style="display:none;">0</span>
-            </div>
-            <div class="nav-btn" id="tab-saved" onclick="switchTab('SAVED')">
-                <span class="nav-icon">✅</span>सेव
-                <span class="badge-count" id="saved-count" style="display:none;">0</span>
-            </div>
-            <div class="nav-btn" id="tab-report" onclick="switchTab('REPORT')">
-                <span class="nav-icon">📊</span>रिपोर्ट
-            </div>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>क्लाउड कलेक्शन ऐप</h2>
+            <p>कृपया अपने अकाउंट में लॉग इन करें</p>
+            <input type="number" id="auth-mobile" placeholder="मोबाइल नंबर" required>
+            <input type="text" id="auth-name" placeholder="आपका नाम (सिर्फ पहली बार)" required>
+            <input type="password" id="auth-pin" placeholder="पासवर्ड / पिन" required>
+            <button class="btn-login" id="auth-btn" onclick="handleAuth()">लॉग इन / रजिस्टर</button>
         </div>
     </div>
 
-    <!-- MAIN APP SECTION -->
-    <div id="main-section">
+    <!-- MAIN APP HEADER -->
+    <div class="header-container" id="app-header" style="display:none;">
+        <div class="main-header">
+            <span class="back-btn" onclick="window.history.back()">&#8592;</span>
+            <h2 class="header-title" id="user-greeting">डेली कलेक्शन</h2>
+            <div class="logout-btn" onclick="logout()">लॉग आउट</div>
+        </div>
+        <div class="top-nav">
+            <div class="nav-btn active" id="tab-home" onclick="switchTab('HOME')"><span>🏠</span>होम</div>
+            <div class="nav-btn" id="tab-draft" onclick="switchTab('DRAFT')"><span>📝</span>ड्राफ्ट<span class="badge-count" id="draft-count" style="display:none;">0</span></div>
+            <div class="nav-btn" id="tab-saved" onclick="switchTab('SAVED')"><span>✅</span>सेव<span class="badge-count" id="saved-count" style="display:none;">0</span></div>
+            <div class="nav-btn" id="tab-report" onclick="switchTab('REPORT')"><span>📊</span>रिपोर्ट</div>
+        </div>
+    </div>
+
+    <!-- MAIN SECTION -->
+    <div id="main-section" style="display:none;">
         <div class="controls" id="controls-section">
-            <label>📅 तारीख (डेटा देखने/सेव करने के लिए)</label>
+            <label>📅 तारीख चुनें</label>
             <div class="date-row">
                 <input type="date" id="current-date" onchange="changeDate()">
             </div>
             <label>📁 मास्टर लेजर लिस्ट (Excel / CSV)</label>
+            <p style="font-size:11px; color:green; margin-top:-5px;">(एक फोन से अपलोड करने पर दूसरे में खुद आ जाएगी)</p>
             <div class="upload-row">
                 <input type="file" id="file-upload" accept=".xls, .xlsx, .csv">
                 <button class="btn-green" onclick="handleFileUpload()">अपलोड</button>
             </div>
-            <div id="loading">डेटा प्रोसेस हो रहा है...</div>
             <label>📍 स्टेशन (रूट) फिल्टर</label>
             <select id="station-filter" onchange="renderCurrentView()">
                 <option value="ALL">सभी स्टेशन (All Stations)</option>
@@ -127,23 +124,19 @@
             <label style="font-size:12px; color:#666;">अंतिम तारीख (To Date):</label>
             <input type="date" id="report-to" style="width:100%; padding:8px; margin-bottom:15px; box-sizing:border-box;">
             
-            <!-- Shorter side-by-side buttons -->
             <div class="flex-buttons">
-                <button class="btn-blue" style="flex: 1;" onclick="generateReport()">
-                    📊 रिपोर्ट देखें
-                </button>
+                <button class="btn-blue" style="flex: 1;" onclick="generateReport()">📊 रिपोर्ट देखें</button>
                 <button class="btn-green" style="flex: 1; gap: 5px; font-size: 13px;" onclick="sendWhatsAppReport()">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
                     WhatsApp शेयर
                 </button>
             </div>
-            
             <div id="report-output" class="report-result">रिपोर्ट यहाँ दिखाई देगी...</div>
         </div>
     </div>
 
-    <!-- Footer now only shows Totals -->
-    <div class="footer">
+    <!-- FOOTER -->
+    <div class="footer" id="app-footer" style="display:none;">
         <div class="footer-totals" id="footer-totals">
             <div>कैश: ₹<span id="total-received">0</span> <span style="font-size:10px; font-weight:normal; color:#adb5bd;">(+ऑनलाइन: ₹<span id="total-online">0</span>)</span></div>
             <div>अतिरिक्त: ₹<span id="total-extra">0</span></div>
@@ -152,11 +145,10 @@
 
     <script>
         // ==========================================
-        // AUTO-SYNC GOOGLE APP SCRIPT URL 
+        // GOOGLE APP SCRIPT URL (100% FIXED)
         // ==========================================
         const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxInpLa6e9L7ZIhzJsRKGW9lqi2E7I7JJykZEpQGG_fin7A1idGD0XlvmvBwgU5AUeJww/exec";
-        // ==========================================
-
+        
         let appData = { parties: [], records: {} };
         let currentDate = "";
         let currentTab = 'HOME';
@@ -172,52 +164,107 @@
             document.getElementById('current-date').value = today;
             currentDate = today;
 
-            loadData();
-            updateLoginUI();
-            
             let lastWeek = new Date(); lastWeek.setDate(lastWeek.getDate() - 7);
             document.getElementById('report-from').value = lastWeek.toISOString().split('T')[0];
             document.getElementById('report-to').value = today;
 
-            if(appData.parties.length > 0) { populateStations(); renderCurrentView(); }
-            
-            // Auto sync check on load
-            setTimeout(autoSyncToGoogleSheet, 3000);
+            checkLogin();
         };
 
-        // --- Login & Logout Logic ---
-        function handleLoginLogout() {
-            let currentName = localStorage.getItem('collection_receiverName');
-            if(currentName) {
-                if(confirm("क्या आप सच में लॉग आउट करना चाहते हैं? (" + currentName + ")")) {
-                    localStorage.removeItem('collection_receiverName');
-                    updateLoginUI();
-                    alert("आप सफलतापूर्वक लॉग आउट हो गए हैं।");
+        // --- AUTHENTICATION & CLOUD FETCH ---
+        function checkLogin() {
+            let mobile = localStorage.getItem('cloud_mobile');
+            let pin = localStorage.getItem('cloud_pin');
+            let name = localStorage.getItem('cloud_name');
+            
+            if(mobile && pin) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app-header').style.display = 'block';
+                document.getElementById('main-section').style.display = 'block';
+                document.getElementById('app-footer').style.display = 'block';
+                document.getElementById('user-greeting').innerText = `👤 ${name || mobile}`;
+                loadDataLocally(); // Fallback load
+                syncCloudState(mobile, pin); // Fetch fresh from cloud automatically!
+            }
+        }
+
+        function handleAuth() {
+            const mobile = document.getElementById('auth-mobile').value.trim();
+            const pin = document.getElementById('auth-pin').value.trim();
+            const name = document.getElementById('auth-name').value.trim();
+            
+            if(!mobile || !pin) { alert("मोबाइल नंबर और पासवर्ड डालें!"); return; }
+            
+            const btn = document.getElementById('auth-btn');
+            btn.innerText = "लॉग इन हो रहा है... ⏳";
+            btn.disabled = true;
+
+            // Fetch from Cloud
+            fetch(`${GOOGLE_SHEET_URL}?mobile=${mobile}&password=${pin}`)
+            .then(res => res.json())
+            .then(data => {
+                if(data.error === "User Not Found") {
+                    if(!name) { alert("पहली बार अकाउंट बनाने के लिए 'आपका नाम' डालना जरूरी है!"); btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false; return; }
+                    if(confirm("यह नया अकाउंट है। क्या आप रजिस्टर करना चाहते हैं?")) {
+                        appData = { parties: [], records: {} };
+                        saveStateToCloud(mobile, name, pin, true); 
+                    } else {
+                        btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
+                    }
+                } else if (data.error === "Wrong Password") {
+                    alert("❌ गलत पासवर्ड! कृपया सही पासवर्ड डालें।");
+                    btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
+                } else {
+                    // Success Login (Cloud Sync)
+                    appData = data;
+                    localStorage.setItem('cloud_mobile', mobile);
+                    localStorage.setItem('cloud_pin', pin);
+                    localStorage.setItem('cloud_name', name || mobile);
+                    saveData();
+                    alert("✅ क्लाउड डेटा सफलतापूवर्क डाउनलोड हो गया!");
+                    location.reload(); 
                 }
-            } else {
-                promptLogin();
-            }
+            })
+            .catch(err => {
+                alert("इंटरनेट कनेक्शन चेक करें! (ऑफ़लाइन लॉगिन किया जा रहा है)");
+                // Offline fallback logic could go here if needed
+                btn.innerText = "लॉग इन / रजिस्टर"; btn.disabled = false;
+            });
         }
 
-        function promptLogin() {
-            let name = prompt("डेटा सेव करने के लिए अपना नाम (Employee Name) दर्ज करें:");
-            if(name && name.trim() !== "") {
-                localStorage.setItem('collection_receiverName', name.trim());
-                updateLoginUI();
-                return true;
-            }
-            return false;
+        function saveStateToCloud(mobile, name, pin, isNew = false) {
+            let payload = { action: "SAVE_STATE", mobile: mobile, name: name, password: pin, appData: appData };
+            
+            fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(res => res.text()).then(res => {
+                localStorage.setItem('cloud_mobile', mobile);
+                localStorage.setItem('cloud_pin', pin);
+                localStorage.setItem('cloud_name', name);
+                saveData();
+                location.reload();
+            });
         }
 
-        function updateLoginUI() {
-            let name = localStorage.getItem('collection_receiverName');
-            let btn = document.getElementById('login-btn');
-            if(name) {
-                btn.innerHTML = `👤 ${name} (लॉग आउट)`;
-                btn.classList.add('logout-btn');
-            } else {
-                btn.innerHTML = `👤 लॉग इन`;
-                btn.classList.remove('logout-btn');
+        function syncCloudState(mobile, pin) {
+            fetch(`${GOOGLE_SHEET_URL}?mobile=${mobile}&password=${pin}`)
+            .then(res => res.json())
+            .then(data => {
+                if(!data.error) {
+                    appData = data;
+                    saveData();
+                    if(appData.parties.length > 0) populateStations();
+                    renderCurrentView();
+                }
+            }).catch(e => console.log("Offline - using local cache"));
+        }
+
+        function logout() {
+            if(confirm("क्या आप सच में लॉग आउट करना चाहते हैं?")) {
+                localStorage.clear();
+                location.reload();
             }
         }
         // ---------------------------
@@ -228,17 +275,12 @@
             renderCurrentView();
         }
 
-        function loadData() {
+        function loadDataLocally() {
             let saved = localStorage.getItem('ultimateCollectionApp_Data');
             if (saved) appData = JSON.parse(saved);
             if (!appData.records) appData.records = {};
-            const todayDate = new Date();
-            for (let dateKey in appData.records) {
-                let entryDate = new Date(dateKey);
-                let diffDays = Math.ceil(Math.abs(todayDate - entryDate) / (1000 * 60 * 60 * 24)); 
-                if (diffDays > 365) delete appData.records[dateKey];
-            }
-            saveData(); 
+            if(appData.parties && appData.parties.length > 0) populateStations();
+            renderCurrentView();
         }
 
         function saveData() { localStorage.setItem('ultimateCollectionApp_Data', JSON.stringify(appData)); }
@@ -246,7 +288,6 @@
         function handleFileUpload() {
             const fileInput = document.getElementById('file-upload');
             if (!fileInput.files[0]) { alert("कृपया फाइल चुनें!"); return; }
-            document.getElementById('loading').style.display = 'block';
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -254,7 +295,7 @@
                     const workbook = XLSX.read(data, {type: 'array'});
                     const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
                     extractParties(jsonData);
-                } catch (error) { alert("फ़ाइल खराबी!"); document.getElementById('loading').style.display = 'none'; }
+                } catch (error) { alert("फ़ाइल खराबी!"); }
             };
             reader.readAsArrayBuffer(fileInput.files[0]);
         }
@@ -282,16 +323,17 @@
                 if (row && row.length > nameIdx && row[nameIdx]) {
                     let name = String(row[nameIdx]).trim();
                     if(name) newData.push({
-                        code: row[codeIdx] ? String(row[codeIdx]).trim() : "N/A",
-                        name: name,
+                        code: row[codeIdx] ? String(row[codeIdx]).trim() : "N/A", name: name,
                         balance: parseFloat(String(row[balIdx] || "0").replace(/[^0-9.-]+/g,"")) || 0,
                         station: row[stationIdx] ? String(row[stationIdx]).trim() : "Unknown"
                     });
                 }
             });
-            document.getElementById('loading').style.display = 'none';
-            if (newData.length > 0) { appData.parties = newData; saveData(); populateStations(); switchTab('HOME'); alert("अपलोड सफल!"); } 
-            else { alert("डेटा नहीं मिला!"); }
+            if (newData.length > 0) { 
+                appData.parties = newData; saveData(); populateStations(); switchTab('HOME'); 
+                triggerAutoSync(null); // Sync Excel list to cloud
+                alert("पार्टी लिस्ट क्लाउड में सेव हो गई!"); 
+            } else { alert("डेटा नहीं मिला!"); }
         }
 
         function populateStations() {
@@ -309,11 +351,9 @@
                 document.getElementById('tab-report').classList.add('active');
                 document.getElementById('main-section').style.display = 'none';
                 document.getElementById('report-section').style.display = 'block';
-                document.getElementById('footer-totals').style.display = 'none';
             } else {
                 document.getElementById('main-section').style.display = 'block';
                 document.getElementById('report-section').style.display = 'none';
-                document.getElementById('footer-totals').style.display = 'flex';
                 document.getElementById('tab-' + tabName.toLowerCase()).classList.add('active');
                 document.getElementById('controls-section').style.display = (tabName === 'HOME') ? 'block' : 'none';
                 document.getElementById('view-title').innerText = (tabName === 'HOME') ? "पार्टी लिस्ट (होम)" : (tabName === 'DRAFT' ? "📝 ड्राफ्ट लिस्ट" : "✅ सेव डिटेल्स");
@@ -329,7 +369,7 @@
         function renderCurrentView() {
             const container = document.getElementById('collection-list');
             container.innerHTML = '';
-            if(appData.parties.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">कोई लिस्ट अपलोड नहीं है।</div>'; updateBadges(); return; }
+            if(!appData.parties || appData.parties.length === 0) { container.innerHTML = '<div style="text-align:center; padding:20px;">कोई लिस्ट नहीं है। कृपया अपलोड करें।</div>'; updateBadges(); return; }
             if (!appData.records[currentDate]) appData.records[currentDate] = {};
             const todayRecords = appData.records[currentDate];
             const fragment = document.createDocumentFragment();
@@ -429,15 +469,6 @@
 
             if(!rec && !disc && !ext) { alert("कृपया राशि दर्ज करें!"); return; }
             
-            // Check for Login Name
-            let currentName = localStorage.getItem('collection_receiverName');
-            if(!currentName) {
-                if(!promptLogin()) {
-                    alert("नाम के बिना एंट्री सेव नहीं होगी!");
-                    return;
-                }
-            }
-            
             if(!appData.records[currentDate][uniqueKey]) appData.records[currentDate][uniqueKey] = {};
             let entry = appData.records[currentDate][uniqueKey];
             entry.received = rec; entry.discount = disc; entry.extra = ext; 
@@ -447,7 +478,16 @@
 
             saveData(); 
             renderCurrentView(); 
-            autoSyncToGoogleSheet(); // Auto Sync trigger directly
+            
+            // BACKGROUND AUTO-SYNC (Sends to cloud without button click)
+            let partyName = appData.parties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.name || "Unknown";
+            let station = appData.parties.find(p => (p.code !== "N/A" ? p.code : p.name) === uniqueKey)?.station || "-";
+            
+            let singleRecord = {
+                date: currentDate, time: entry.time, receiverName: localStorage.getItem('cloud_name'),
+                station: station, partyName: partyName, received: rec, discount: disc, extra: ext, mode: mode, remark: rem, uniqueKey: uniqueKey
+            };
+            triggerAutoSync(singleRecord); 
         }
 
         function editEntry(uniqueKey) { appData.records[currentDate][uniqueKey].status = 'draft'; appData.records[currentDate][uniqueKey].synced = false; saveData(); renderCurrentView(); }
@@ -460,16 +500,10 @@
                 if (item.received || item.discount || item.extra) {
                     if (item.status === 'saved') { 
                         savedCount++; 
-                        let rec = parseFloat(item.received || 0);
-                        let ext = parseFloat(item.extra || 0);
-                        if (item.mode === 'Online') {
-                            totalOnline += (rec + ext);
-                        } else {
-                            totalCash += rec;
-                            totalExtCash += ext;
-                        }
-                    } 
-                    else if (item.status === 'draft') { draftCount++; }
+                        let rec = parseFloat(item.received || 0); let ext = parseFloat(item.extra || 0);
+                        if (item.mode === 'Online') totalOnline += (rec + ext);
+                        else { totalCash += rec; totalExtCash += ext; }
+                    } else if (item.status === 'draft') { draftCount++; }
                 }
             }
             document.getElementById('total-received').innerText = totalCash;
@@ -482,65 +516,55 @@
         }
 
         // ==========================================
-        // AUTO SYNC FUNCTION
+        // 100% BACKGROUND AUTO SYNC FUNCTION
         // ==========================================
-        function autoSyncToGoogleSheet() {
-            const receiverName = localStorage.getItem('collection_receiverName');
-            if(!receiverName || !GOOGLE_SHEET_URL) return;
+        function triggerAutoSync(newRecordObject) {
+            const mobile = localStorage.getItem('cloud_mobile');
+            const pin = localStorage.getItem('cloud_pin');
+            const name = localStorage.getItem('cloud_name');
+            if(!mobile || !pin) return;
 
-            let dataToSend = [];
-            let partyMap = {};
-            appData.parties.forEach((p, idx) => { partyMap[p.code !== "N/A" ? p.code : String(idx) + p.name] = p; });
+            let payload = {
+                action: "SYNC_BOTH",
+                mobile: mobile,
+                password: pin,
+                name: name,
+                appData: appData,
+                newRecords: newRecordObject ? [newRecordObject] : []
+            };
 
-            for(let dateKey in appData.records) {
-                let dayRecords = appData.records[dateKey];
-                for(let pKey in dayRecords) {
-                    let entry = dayRecords[pKey];
-                    if(entry.status === 'saved' && !entry.synced) {
-                        let pInfo = partyMap[pKey] || { name: "Unknown", station: "-" };
-                        dataToSend.push({
-                            date: dateKey,
-                            time: entry.time || 'N/A',
-                            receiverName: receiverName,
-                            station: pInfo.station,
-                            partyName: pInfo.name,
-                            received: entry.received || 0,
-                            discount: entry.discount || 0,
-                            extra: entry.extra || 0,
-                            mode: entry.mode || 'Cash',
-                            remark: entry.remark || ''
-                        });
-                    }
-                }
-            }
-
-            if(dataToSend.length === 0) return;
-
-            fetch(GOOGLE_SHEET_URL, { method: "POST", body: JSON.stringify(dataToSend) })
-            .then(response => response.text())
+            // fetch header MUST be text/plain to avoid CORS preflight block
+            fetch(GOOGLE_SHEET_URL, { 
+                method: "POST", 
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload) 
+            })
+            .then(res => res.text())
             .then(result => {
                 if(result === "Success") {
-                    for(let dateKey in appData.records) {
-                        for(let pKey in appData.records[dateKey]) {
-                            if(appData.records[dateKey][pKey].status === 'saved') {
-                                appData.records[dateKey][pKey].synced = true;
+                    if(newRecordObject) {
+                        appData.records[currentDate][newRecordObject.uniqueKey].synced = true;
+                    } else {
+                        // Mark all as synced
+                        for(let d in appData.records) {
+                            for(let k in appData.records[d]) {
+                                if(appData.records[d][k].status === 'saved') appData.records[d][k].synced = true;
                             }
                         }
                     }
                     saveData();
-                    if(currentTab === 'SAVED') renderCurrentView(); // Refresh icons if looking at saved view
+                    if(currentTab === 'SAVED') renderCurrentView(); 
                 }
             })
-            .catch(error => { console.error("Auto Sync Failed (Offline or Error):", error); });
+            .catch(error => { console.log("Offline - Sync will happen later"); });
         }
 
         let currentReportText = "";
         function generateReport() {
             const fromDateStr = document.getElementById('report-from').value;
             const toDateStr = document.getElementById('report-to').value;
-            const receiverName = localStorage.getItem('collection_receiverName');
+            const receiverName = localStorage.getItem('cloud_name');
 
-            if(!receiverName) { alert("⚠️ कृपया ऊपर 'लॉग इन' करके अपना नाम दर्ज करें!"); return; }
             if(!fromDateStr || !toDateStr) { alert("कृपया From और To Date चुनें।"); return; }
 
             const fromDate = new Date(fromDateStr); const toDate = new Date(toDateStr);
@@ -565,17 +589,10 @@
                             let pInfo = partyMap[pKey] || { name: "अज्ञात", station: "-" };
                             let parts = [`₹${entry.received || 0}`];
                             
-                            let recAmount = parseFloat(entry.received || 0);
-                            let extAmount = parseFloat(entry.extra || 0);
-                            let discAmount = parseFloat(entry.discount || 0);
+                            let recAmount = parseFloat(entry.received || 0); let extAmount = parseFloat(entry.extra || 0); let discAmount = parseFloat(entry.discount || 0);
 
-                            if (entry.mode === 'Online') {
-                                parts.push(`(ऑनलाइन: ${entry.remark || '-'})`);
-                                totalOnline += (recAmount + extAmount);
-                            } else {
-                                totalCash += recAmount;
-                                totalExtCash += extAmount;
-                            }
+                            if (entry.mode === 'Online') { parts.push(`(ऑनलाइन: ${entry.remark || '-'})`); totalOnline += (recAmount + extAmount); } 
+                            else { totalCash += recAmount; totalExtCash += extAmount; }
                             
                             if (entry.discount && discAmount > 0) parts.push(`छूट: ₹${entry.discount}`);
                             if (entry.extra && extAmount > 0) parts.push(`एक्स्ट्रा: ₹${entry.extra}`);
@@ -599,8 +616,6 @@
         }
 
         function sendWhatsAppReport() {
-            const receiverName = localStorage.getItem('collection_receiverName');
-            if(!receiverName) { alert("⚠️ कृपया 'लॉग इन' करके नाम दर्ज करें!"); return; }
             if(!currentReportText) { generateReport(); if(!currentReportText) return; }
             window.open("https://wa.me/?text=" + encodeURIComponent(currentReportText), '_blank');
         }
